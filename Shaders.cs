@@ -127,7 +127,8 @@ PS_IN VS(VS_IN input)
 
 	output.position = mul(worldViewProjection,input.position);
 
-	output.normal = input.normal;
+	output.normal.xyz = mul((float3x3)worldViewProjection, input.normal.xyz);
+	output.normal.w = 1;
 
 	output.texCoord = input.texCoord;
 
@@ -206,7 +207,8 @@ PS_IN VS(VS_IN input)
 
 	output.position = mul(worldViewProjection,input.position);
 
-	output.normal = input.normal;
+	output.normal.xyz = mul((float3x3)worldViewProjection, input.normal.xyz);
+	output.normal.w = 1;
 
 	return output;
 }
