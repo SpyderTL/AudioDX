@@ -22,7 +22,7 @@ namespace TestSharpDX
 		[STAThread]
 		static void Main()
 		{
-			var samples = 1024;
+			var samples = 512;
 
 			var devices = DirectSoundCapture.GetDevices();
 
@@ -39,9 +39,13 @@ namespace TestSharpDX
 
 			audioBuffer.Start(true);
 
-			using (var form = new RenderForm())
+			using (var form = new Form())
 			using (var factory = new Factory4())
 			{
+				form.Text = "AudioDX";
+				form.ClientSize = new System.Drawing.Size(1024, 768);
+				form.StartPosition = FormStartPosition.CenterScreen;
+
 				Device11 device;
 				SwapChain swapChain;
 
@@ -124,14 +128,14 @@ namespace TestSharpDX
 				var audioData = new byte[audioFormat.ConvertLatencyToByteSize(24)];
 				var audioIndex = 0;
 
-				var leftWaveForm = new float[1024 * 8];
-				var rightWaveForm = new float[1024 * 8];
+				var leftWaveForm = new float[samples * 8];
+				var rightWaveForm = new float[samples * 8];
 
-				for (var sample = 0; sample < 1024; sample++)
-				{
-					leftWaveForm[(sample * 8) + 0] = -1.0f + ((float)sample / 512.0f);
-					rightWaveForm[(sample * 8) + 0] = -1.0f + ((float)sample / 512.0f);
-				}
+				//for (var sample = 0; sample < samples; sample++)
+				//{
+				//	leftWaveForm[(sample * 8) + 0] = -1.0f + ((float)sample / (samples - 1) * 2.0f);
+				//	rightWaveForm[(sample * 8) + 0] = -1.0f + ((float)sample / (samples - 1) * 2.0f);
+				//}
 
 				var waveFormBufferDescription = new BufferDescription
 				{
@@ -147,8 +151,8 @@ namespace TestSharpDX
 				var leftWaveFormVertexBufferBinding = new VertexBufferBinding(leftWaveFormVertexBuffer, 8 * sizeof(float), 0);
 				var rightWaveFormVertexBufferBinding = new VertexBufferBinding(rightWaveFormVertexBuffer, 8 * sizeof(float), 0);
 
-				var leftFrequencies = new float[1024];
-				var rightFrequencies = new float[1024];
+				var leftFrequencies = new float[samples];
+				var rightFrequencies = new float[samples];
 				
 				RenderLoop.Run(form, () =>
 				{
@@ -156,7 +160,7 @@ namespace TestSharpDX
 					{
 						audioBuffer.Read(audioData, 0, audioData.Length, 0, LockFlags.None);
 
-						for (var sample = 0; sample < 1024; sample++)
+						for (var sample = 0; sample < samples; sample++)
 						{
 							leftWaveForm[(sample * 8) + 1] = -BitConverter.ToInt16(audioData, sample * 4) / (float)short.MinValue;
 							rightWaveForm[(sample * 8) + 1] = -BitConverter.ToInt16(audioData, (sample * 4) + 2) / (float)short.MinValue;
@@ -180,14 +184,14 @@ namespace TestSharpDX
 
 						stream.Dispose();
 
-						for (var sample = 0; sample < 1024; sample++)
+						for (var sample = 0; sample < samples; sample++)
 						{
 							leftFrequencies[sample] = 0.0f;
 							rightFrequencies[sample] = 0.0f;
 
-							for (var sample2 = 0; sample2 < 1024; sample2++)
+							for (var sample2 = 0; sample2 < samples; sample2++)
 							{
-								var theta = -2.0f * MathUtil.Pi * (float)sample2 * (float)sample / 1024.0f;
+								var theta = -2.0f * MathUtil.Pi * (float)sample2 * (float)sample / (samples << 1);
 								var value = (float)Math.Cos(theta);
 
 								leftFrequencies[sample] += value * leftWaveForm[(sample2 * 8) + 1];
@@ -195,21 +199,20 @@ namespace TestSharpDX
 							}
 						}
 
-						for (var sample = 0; sample < 1024; sample++)
+						for (var sample = 0; sample < samples; sample++)
 						{
-							leftWaveForm[(sample * 8) + 1] = Math.Abs(leftFrequencies[sample >> 1]);
-							rightWaveForm[(sample * 8) + 1] = Math.Abs(rightFrequencies[sample >> 1]);
+							//leftWaveForm[(sample * 8) + 1] = Math.Abs(leftFrequencies[sample]);
+							//rightWaveForm[(sample * 8) + 1] = Math.Abs(rightFrequencies[sample]);
+
+							var angle = ((float)sample / (float)samples) * MathUtil.TwoPi;
+							var sin = (float)Math.Sin(angle);
+							var cos = (float)Math.Cos(angle);
+
+							leftWaveForm[(sample * 8) + 0] = (Math.Abs(leftFrequencies[sample]) + 10.0f) * sin * -0.01f;
+							leftWaveForm[(sample * 8) + 1] = (Math.Abs(leftFrequencies[sample]) + 10.0f) * cos * -0.01f;
+							rightWaveForm[(sample * 8) + 0] = (Math.Abs(rightFrequencies[sample]) + 10.0f) * sin * 0.01f;
+							rightWaveForm[(sample * 8) + 1] = (Math.Abs(rightFrequencies[sample]) + 10.0f) * cos * -0.01f;
 						}
-
-						var max = 0;
-
-						for (var sample = 0; sample < 512; sample++)
-						{
-							if (leftWaveForm[(sample * 8) + 1] > leftWaveForm[(max * 8) + 1])
-								max = sample;
-						}
-
-						form.Text = max.ToString();
 
 						context.MapSubresource(leftWaveFormVertexBuffer, 0, MapMode.WriteDiscard, SharpDX.Direct3D11.MapFlags.None, out stream);
 
@@ -264,7 +267,7 @@ namespace TestSharpDX
 
 					var projection = Matrix.PerspectiveFovRH(3.14f / 3.0f, ratio, 0.01f, 1000);
 					var view = Matrix.LookAtRH(new Vector3(0, 2, -5), Vector3.Zero, Vector3.UnitY);
-					var world = Matrix.Scaling(1.0f + Math.Abs(((leftWaveForm[audioIndex + 1]) * 0.5f))) * Matrix.RotationY(Environment.TickCount / 1000.0f);
+					var world = Matrix.Scaling(1.0f + Math.Abs(((leftWaveForm[audioIndex + 1]) * 0.01f))) * Matrix.RotationY(Environment.TickCount / 1000.0f);
 					//var world = Matrix.Scaling(1.0f + ((audioData[audioIndex] + audioData[audioIndex + 1] << 8) * 0.00001f)) * Matrix.RotationY(Environment.TickCount / 1000.0f);
 
 					audioIndex += 8;
@@ -303,7 +306,8 @@ namespace TestSharpDX
 					// Draw Waveforms
 					Shaders.Position.Apply(context);
 
-					worldViewProjection = Matrix.Scaling(1, 0.45f, 1) * Matrix.Translation(0, 0.1f, 0);
+					//worldViewProjection = Matrix.Scaling(1, 0.01f, 1) * Matrix.Translation(0, 0.1f, 0);
+					worldViewProjection = Matrix.Scaling(1, 1, 1) * Matrix.Translation(-0.5f, 0, 0);
 
 					context.UpdateSubresource(ref worldViewProjection, worldViewProjectionBuffer);
 
@@ -311,18 +315,19 @@ namespace TestSharpDX
 
 					context.InputAssembler.SetVertexBuffers(0, leftWaveFormVertexBufferBinding);
 
-					context.Draw(1024, 0);
+					context.Draw(samples, 0);
 
-					worldViewProjection = Matrix.Scaling(1, 0.45f, 1) * Matrix.Translation(0, -0.1f, 0);
+					//worldViewProjection = Matrix.Scaling(1, 0.01f, 1) * Matrix.Translation(0, -0.1f, 0);
+					worldViewProjection = Matrix.Scaling(1, 1, 1) * Matrix.Translation(0.5f, 0f, 0);
 
 					context.UpdateSubresource(ref worldViewProjection, worldViewProjectionBuffer);
 
 					context.InputAssembler.SetVertexBuffers(0, rightWaveFormVertexBufferBinding);
 
-					context.Draw(1024, 0);
+					context.Draw(samples, 0);
 
 					// Draw Frequencies
-					Shapes.Billboard.Begin(context);
+					//Shapes.Billboard.Begin(context);
 
 					//Shapes.Billboard.Draw(context);
 

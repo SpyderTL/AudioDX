@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2035
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSharpDX", "TestSharpDX.csproj", "{06F57827-7901-4420-8E86-D47780FB64BD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AudioDX", "AudioDX.csproj", "{06F57827-7901-4420-8E86-D47780FB64BD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
