@@ -22,8 +22,8 @@ namespace TestSharpDX
 			{
 				-0.5f, 0.5f, 0, 0, 0, 1, 0, 0,
 				0.5f, 0.5f, 0, 0, 0, 1, 1, 0,
-				0.5f,-0.5f, 0, 0, 0, 1, 1, 1,
 				-0.5f,-0.5f, 0, 0, 0, 1, 0, 1,
+				0.5f,-0.5f, 0, 0, 0, 1, 1, 1,
 			};
 
 			public static void Load(Device device)
@@ -50,7 +50,7 @@ namespace TestSharpDX
 
 			public static void Draw(DeviceContext context)
 			{
-				context.Draw(vertices.Length, 0);
+				context.Draw(4, 0);
 			}
 		}
 

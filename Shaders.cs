@@ -1,4 +1,5 @@
-﻿using SharpDX.D3DCompiler;
+﻿using SharpDX;
+using SharpDX.D3DCompiler;
 using SharpDX.Direct3D11;
 using System;
 using System.Collections.Generic;
@@ -10,16 +11,22 @@ namespace TestSharpDX
 {
 	public static class Shaders
 	{
-		public static class Position
+		public static class Color
 		{
 			private static VertexShader vertexShader;
 			private static PixelShader pixelShader;
 			private static InputLayout layout;
-
+			private static SharpDX.Direct3D11.Buffer worldViewProjectionBuffer;
+			private static SharpDX.Direct3D11.Buffer emissiveBuffer;
 			private static string source = @"
 cbuffer data :register(b0)
 {
 	float4x4 worldViewProjection;
+};
+
+cbuffer data :register(b1)
+{
+	float4 emissive;
 };
 
 Texture2D textureMap;
@@ -55,7 +62,7 @@ PS_IN VS(VS_IN input)
 
 float4 PS(PS_IN input) : SV_Target
 {
-	float4 output = (float4)1;
+	float4 output = emissive;
 
 	return output;
 }
@@ -73,6 +80,9 @@ float4 PS(PS_IN input) : SV_Target
 					new InputElement("NORMAL", 0, SharpDX.DXGI.Format.R32G32B32_Float, 12, 0),
 					new InputElement("TEXCOORD", 0, SharpDX.DXGI.Format.R32G32_Float, 24, 0)
 				});
+
+				worldViewProjectionBuffer = new SharpDX.Direct3D11.Buffer(device, Utilities.SizeOf<Matrix>(), ResourceUsage.Default, BindFlags.ConstantBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 0);
+				emissiveBuffer = new SharpDX.Direct3D11.Buffer(device, Utilities.SizeOf<Vector4>(), ResourceUsage.Default, BindFlags.ConstantBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 0);
 			}
 
 			public static void Apply(DeviceContext context)
@@ -84,6 +94,19 @@ float4 PS(PS_IN input) : SV_Target
 				context.GeometryShader.Set(null);
 				context.DomainShader.Set(null);
 				context.HullShader.Set(null);
+
+				context.VertexShader.SetConstantBuffer(0, worldViewProjectionBuffer);
+				context.PixelShader.SetConstantBuffer(1, emissiveBuffer);
+			}
+
+			public static void WorldViewProjection(DeviceContext context, ref Matrix worldViewProjection)
+			{
+				context.UpdateSubresource(ref worldViewProjection, worldViewProjectionBuffer);
+			}
+
+			public static void Emissive(DeviceContext context, ref Vector4 emissive)
+			{
+				context.UpdateSubresource(ref emissive, emissiveBuffer);
 			}
 		}
 
@@ -180,11 +203,17 @@ float4 PS(PS_IN input) : SV_Target
 			private static VertexShader vertexShader;
 			private static PixelShader pixelShader;
 			private static InputLayout layout;
-
+			private static SharpDX.Direct3D11.Buffer worldViewProjectionBuffer;
+			private static SharpDX.Direct3D11.Buffer diffuseBuffer;
 			private static string source = @"
 cbuffer data :register(b0)
 {
 	float4x4 worldViewProjection;
+};
+
+cbuffer data :register(b1)
+{
+	float4 diffuse;
 };
 
 struct VS_IN
@@ -215,13 +244,13 @@ PS_IN VS(VS_IN input)
 
 float4 PS(PS_IN input) : SV_Target
 {
-	float4 output = (float4)1;
+	float4 output = diffuse;
 
 	float3 light = { 5, 9, 1 };
 
 	light = normalize(light);
 
-	output.rgb = (dot(light, input.normal.xyz) * 0.5) + 0.5;
+	output.rgb *= (dot(light, input.normal.xyz) * 0.5) + 0.5;
 	
 	return output;
 }
@@ -239,6 +268,9 @@ float4 PS(PS_IN input) : SV_Target
 					new InputElement("NORMAL", 0, SharpDX.DXGI.Format.R32G32B32_Float, 12, 0),
 					new InputElement("TEXCOORD", 0, SharpDX.DXGI.Format.R32G32_Float, 24, 0)
 				});
+
+				worldViewProjectionBuffer = new SharpDX.Direct3D11.Buffer(device, Utilities.SizeOf<Matrix>(), ResourceUsage.Default, BindFlags.ConstantBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 0);
+				diffuseBuffer = new SharpDX.Direct3D11.Buffer(device, Utilities.SizeOf<Vector4>(), ResourceUsage.Default, BindFlags.ConstantBuffer, CpuAccessFlags.None, ResourceOptionFlags.None, 0);
 			}
 
 			public static void Apply(DeviceContext context)
@@ -250,6 +282,19 @@ float4 PS(PS_IN input) : SV_Target
 				context.GeometryShader.Set(null);
 				context.DomainShader.Set(null);
 				context.HullShader.Set(null);
+
+				context.VertexShader.SetConstantBuffer(0, worldViewProjectionBuffer);
+				context.PixelShader.SetConstantBuffer(1, diffuseBuffer);
+			}
+
+			internal static void WorldViewProjection(DeviceContext context, ref Matrix worldViewProjection)
+			{
+				context.UpdateSubresource(ref worldViewProjection, worldViewProjectionBuffer);
+			}
+
+			internal static void Diffuse(DeviceContext context, ref Vector4 diffuse)
+			{
+				context.UpdateSubresource(ref diffuse, diffuseBuffer);
 			}
 		}
 	}
